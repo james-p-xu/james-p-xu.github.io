@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title }}{% if page_title %} · {{ page_title }}{% endif %}</title>
+    <meta name="description" content="{{ description }}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ base_url }}/assets/main.css" />
+    {% if rss %}
+    <link rel="alternate" type="application/rss+xml" title="{{ title }} RSS" href="{{ base_url }}/rss.xml" />
+    {% endif %}
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <a class="brand" href="{{ base_url }}/">{{ title }}</a>
+        <nav class="nav">
+          <a class="btn subtle" href="{{ base_url }}/">Home</a>
+          <a class="btn subtle" href="{{ base_url }}/about/">About</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-wrap">
+        <p>© {{ now.year }} {{ author }}</p>
+        <div class="footer-social">
+          {% if social.twitter %}
+          <a class="icon" href="{{ social.twitter }}" aria-label="Twitter" rel="me noopener" target="_blank">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M22.46 6c-.77.35-1.6.58-2.46.69a4.16 4.16 0 0 0 1.82-2.3 8.33 8.33 0 0 1-2.64 1.01 4.14 4.14 0 0 0-7.05 3.78 11.76 11.76 0 0 1-8.54-4.33 4.12 4.12 0 0 0 1.28 5.52 4.1 4.1 0 0 1-1.87-.52v.05a4.14 4.14 0 0 0 3.32 4.06 4.2 4.2 0 0 1-1.86.07 4.15 4.15 0 0 0 3.87 2.88A8.32 8.32 0 0 1 2 19.54a11.75 11.75 0 0 0 6.36 1.86c7.63 0 11.8-6.32 11.8-11.8 0-.18 0-.36-.01-.54A8.42 8.42 0 0 0 24 6.56a8.21 8.21 0 0 1-2.36.65c.85-.51 1.5-1.3 1.82-2.25z"/></svg>
+          </a>
+          {% endif %}
+          {% if social.linkedin %}
+          <a class="icon" href="{{ social.linkedin }}" aria-label="LinkedIn" rel="me noopener" target="_blank">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M4.98 3.5C4.98 4.88 3.86 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM.5 8.5h4V23h-4V8.5zM8.5 8.5h3.8v2h.05c.53-1 1.82-2.05 3.75-2.05 4 0 4.74 2.63 4.74 6.06V23h-4v-5.8c0-1.38-.02-3.16-1.93-3.16-1.93 0-2.23 1.5-2.23 3.05V23h-4V8.5z"/></svg>
+          </a>
+          {% endif %}
+          {% if social.github %}
+          <a class="icon" href="{{ social.github }}" aria-label="GitHub" rel="me noopener" target="_blank">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 .5C5.73.5.98 5.24.98 11.5c0 4.85 3.14 8.96 7.5 10.41.55.1.75-.24.75-.53 0-.26-.01-1.12-.02-2.03-3.05.66-3.7-1.3-3.7-1.3-.5-1.27-1.22-1.6-1.22-1.6-1-.69.08-.68.08-.68 1.1.08 1.68 1.13 1.68 1.13.98 1.68 2.57 1.2 3.2.92.1-.71.38-1.2.69-1.48-2.43-.28-4.98-1.22-4.98-5.43 0-1.2.43-2.18 1.13-2.95-.11-.28-.49-1.43.11-2.98 0 0 .92-.29 3.02 1.13a10.5 10.5 0 0 1 5.5 0c2.1-1.42 3.02-1.13 3.02-1.13.6 1.55.22 2.7.11 2.98.7.77 1.13 1.75 1.13 2.95 0 4.22-2.56 5.15-4.99 5.42.39.34.73 1.01.73 2.05 0 1.48-.01 2.67-.01 3.03 0 .29.19.64.76.53A10.52 10.52 0 0 0 23.02 11.5C23.02 5.24 18.27.5 12 .5Z"/></svg>
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

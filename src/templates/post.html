@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+  <article class="post">
+    <h1>{{ post.title }}</h1>
+    <time class="post-date" datetime="{{ post.date_iso }}">{{ post.date_human }}</time>
+    {% if post.description %}<p class="lede">{{ post.description }}</p>{% endif %}
+    <div class="content">
+      {{ post.html | safe }}
+    </div>
+  </article>
+{% endblock %}

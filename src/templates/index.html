@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+  <article class="page">
+    <h1>{{ title }}</h1>
+    {% if description %}<p class="lede">{{ description }}</p>{% endif %}
+
+    <section class="posts">
+      {% for post in posts %}
+        <a class="post-card" href="{{ base_url }}/{{ post.slug }}/">
+          <h2>{{ post.title }}</h2>
+          <time datetime="{{ post.date_iso }}">{{ post.date_human }}</time>
+          {% if post.description %}<p>{{ post.description }}</p>{% endif %}
+        </a>
+      {% else %}
+        <p>No posts yet.</p>
+      {% endfor %}
+    </section>
+  </article>
+{% endblock %}
