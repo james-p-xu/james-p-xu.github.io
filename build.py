@@ -4,7 +4,7 @@ import datetime as dt
 import pathlib
 import yaml
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from markdown import markdown
+import mistune
 from slugify import slugify
 
 ROOT = pathlib.Path(__file__).parent.resolve()
@@ -61,7 +61,10 @@ def parse_front_matter_md(path: pathlib.Path):
         _, rest = text.split("---\n", 1)
         fm, content_md = rest.split("\n---\n", 1)
         meta = yaml.safe_load(fm) or {}
-    html = markdown(content_md, extensions=["fenced_code", "codehilite", "tables", "toc", "smarty"])
+    md = mistune.create_markdown(
+        plugins=["strikethrough", "table", "task_lists", "url", "footnotes"]
+    )
+    html = md(content_md)
     return meta, html
 
 
