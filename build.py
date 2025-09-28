@@ -76,6 +76,15 @@ def parse_front_matter_md(path: pathlib.Path):
     html = md(content_md)
     return meta, html
 
+def render_inline_markdown(text: str) -> str:
+    renderer = mistune.HTMLRenderer()
+    md = mistune.create_markdown(renderer=renderer)
+
+    html = md(text)
+    # Remove <p>...</p> if it's wrapping the whole string
+    if html.startswith("<p>") and html.endswith("</p>\n"):
+        html = html[3:-5]
+    return html
 
 def parse_post(path: pathlib.Path):
     meta, html = parse_front_matter_md(path)
@@ -84,6 +93,15 @@ def parse_post(path: pathlib.Path):
     date = coerce_date(date_val) if date_val is not None else dt.datetime.utcnow()
     slug = meta.get("slug") or slugify(title)
     description = meta.get("description", "")
+    references_md = meta.get("references", [])
+
+    # Render Markdown inside references
+    references_html = [render_inline_markdown(r) for r in references_md]
+
+    # Replace [1], [2], etc. in html with links to footer
+    for i, _ in enumerate(references_html, start=1):
+        html = html.replace(f"[{i}]", f'<a href="#ref-{i}" class="reference">[{i}]</a>')
+
     return {
         "title": title,
         "date": date,
@@ -92,6 +110,7 @@ def parse_post(path: pathlib.Path):
         "slug": slug,
         "description": description,
         "html": html,
+        "references": references_html,
         "source_path": str(path.relative_to(ROOT)),
     }
 

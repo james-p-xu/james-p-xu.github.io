@@ -7,5 +7,20 @@
     <div class="content">
       {{ post.html | safe }}
     </div>
+
+    {% if post.references %}
+    <section class="post-footer">
+      <hr>
+      <div class="references">
+        <h4>References</h4>
+        <ol class="content">
+          {% for ref in post.references %}
+            <li id="ref-{{ loop.index }}">{{ ref | safe }}</li>
+          {% endfor %}
+        </ol>
+      </div>
+    </section>
+    {% endif %}
+
   </article>
 {% endblock %}
