@@ -69,6 +69,14 @@ def parse_front_matter_md(path: pathlib.Path):
             id_attr = slugify(text)
             return f'<h{level} id="{id_attr}">{text}</h{level}>\n'
 
+        def image(self, text, url, title=None):
+            # Normalize asset paths for the built site
+            if url.startswith("../assets/"):
+                url = url.replace("../assets/", "/assets/")
+
+            title_attr = f' title="{title}"' if title else ""
+            return f'<img src="{url}" alt="{text}"{title_attr}>'
+
     md = mistune.create_markdown(
         renderer=HeaderWithID(),
         plugins=["strikethrough", "table", "task_lists", "url", "footnotes"]
