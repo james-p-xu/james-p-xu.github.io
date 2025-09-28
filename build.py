@@ -61,7 +61,16 @@ def parse_front_matter_md(path: pathlib.Path):
         _, rest = text.split("---\n", 1)
         fm, content_md = rest.split("\n---\n", 1)
         meta = yaml.safe_load(fm) or {}
+
+    # MD renderer with header IDs
+    class HeaderWithID(mistune.HTMLRenderer):
+        def heading(self, text, level):
+            # generate slugified ID
+            id_attr = slugify(text)
+            return f'<h{level} id="{id_attr}">{text}</h{level}>\n'
+
     md = mistune.create_markdown(
+        renderer=HeaderWithID(),
         plugins=["strikethrough", "table", "task_lists", "url", "footnotes"]
     )
     html = md(content_md)
