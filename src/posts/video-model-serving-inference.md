@@ -13,8 +13,10 @@ references:
     - 'Salimans & Ho. ["Progressive Distillation for Fast Sampling of Diffusion Models"](https://arxiv.org/abs/2202.00512). 2022.'
     - 'Ho & Salimans. ["Classifier-Free Diffusion Guidance"](https://arxiv.org/abs/2207.12598). 2022.'
     - 'Meng et al. ["On Distillation of Guided Diffusion Models"](https://arxiv.org/abs/2210.03142). 2023.'
+    - 'Rombach et al. ["High-Resolution Image Synthesis with Latent Diffusion Models"](https://arxiv.org/abs/2112.10752). 2022.'
     - 'Peebles & Xie. ["Scalable Diffusion Models with Transformers"](https://arxiv.org/abs/2212.09748). 2023.'
     - 'Esser et al. ["Scaling Rectified Flow Transformers for High-Resolution Image Synthesis"](https://arxiv.org/abs/2403.03206). 2024.'
+    - 'Chen et al. ["Deep Compression Autoencoder for Efficient High-Resolution Diffusion Models"](https://arxiv.org/abs/2410.10733). 2025.'
     - 'Liu et al. ["Timestep Embedding Tells: It''s Time to Cache for Video Diffusion Model"](https://arxiv.org/abs/2411.19108). 2025.'
     - 'Xi et al. ["Sparse VideoGen: Accelerating Video Diffusion Transformers with Spatial-Temporal Sparsity"](https://arxiv.org/abs/2502.01776). 2025.'
     - 'Xia et al. ["Training-free and Adaptive Sparse Attention for Efficient Long Video Generation"](https://arxiv.org/abs/2502.21079). 2025.'
@@ -73,7 +75,17 @@ During training, conditioning (e.g. text prompt) is randomly dropped with some p
 
 Running the model twice per step is computationally expensive, so practical implementations often run it once per step with double the effective batch size to compute both conditional and unconditional outputs in parallel. However, this still increases memory usage (larger activations) and latency (typically already compute-bound). Ideally, we would like a model that directly predicts the guided output.
 
-Meng et al. (2023) proposed and validated this idea, demonstrating its compability with progressive distillation [10]. The key tradeoff is that the distilled model is tied to a specific guidance weight $w$ used during training, losing flexibility at inference time. In practice, this is acceptable since we typically use a single fixed guidance weight (usually in the range of 5-8).
+Meng et al. (2022) proposed and validated this idea, demonstrating its compability with progressive distillation [10]. The key tradeoff is that the distilled model is tied to a specific guidance weight $w$ used during training, losing flexibility at inference time. In practice, this is acceptable since we typically use a single fixed guidance weight (usually in the range of 5-8).
+
+### High-Compression VAE
+Modern video models are latent diffusion models (LDMs) [11]. LDMs allow the diffusion network - including architectures such as DiT [12] and RFT [13] - to operate on compressed latents, which significantly reduces training and inference compute requirements. DC-AE (2024) explores high spatial compression ratios of up to 64× (compared to conventional 8× compression), further reducing the computational workload for the diffusion network [14].
+
+Without diving too deep into the technical contributions of the paper, we can understand the value of higher-compression VAEs as follows. In transformer-based video models, the sequence length directly depends on the number of frames and spatial resolution of the VAE latent output, such that $S \propto T \times H \times W$, where $H$ and $W$ are the height and width of the compressed latent map.
+
+![Sora 1D sequence](../assets/images/video_ldm_patches.png)
+*Figure 4. Videos are VAE-encoded into a latent space, then patchified into a 1D sequence. source: [OpenAI Sora](https://openai.com/index/video-generation-models-as-world-simulators/)*
+
+Compared to previous 8× compression methods, DC-AE's 64× compression reduces the sequence length by 64× (due to an 8× increase in both height and width compression), resulting in up to a 4096× reduction in the quadratic attention computation.
 
 ### Timestep Caching
 
@@ -86,11 +98,14 @@ Meng et al. (2023) proposed and validated this idea, demonstrating its compabili
 
 
 ## Serving Optimizations
-This section is more experimental than previous sections. The discussion will be based off DiT-Serve and conventional LLM serving ideas.
-
+This section is more experimental than previous sections. The discussion will be primarily based off DiT-Serve and conventional LLM serving ideas.
 
 ### (Continuous) Batching
 
-### Model Compilation and CUDA Graphs
+### Sequence/Context Parallelism
 
-### VAE Chunking
+### Patch Parallelism
+
+### VAE Chunking and Caching
+
+### Model Compilation and CUDA Graphs
