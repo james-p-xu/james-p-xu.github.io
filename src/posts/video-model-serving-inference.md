@@ -1,7 +1,7 @@
 ---
-title: Serving DiTs/RFTs at Scale
+title: DiT/RFT Inference at Scale
 date: 2025-10-13
-description: Designing the next generation of video model serving systems.
+description: Scaling up video model inference along the research-engineering stack.
 references:
     - 'Monas & Jang. ["https://www.1x.tech/discover/1x-world-model"](https://www.1x.tech/discover/1x-world-model). 2024.'
     - 'Noam Shazeer. ["Fast Transformer Decoding: One Write-Head is All You Need"](https://arxiv.org/abs/1911.02150). 2019.'
