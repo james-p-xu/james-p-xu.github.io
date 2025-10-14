@@ -44,7 +44,7 @@ Everyone is thinking about language model inference and serving [insert source h
 The clear use case is in world models - action-conditioned video generation models [1]. These models learn the complexities of the real world and can envision several futures based on different possible actions. The use of these models will allow us to scale up robotics simulation and evaluation, paving the way towards general purpose intelligence robots.
 
 ![1X world model](../assets/images/world_model)
-*Robotics world model. source: [1]*
+*Robotics world model.* source: [1]
 
 The [Sora app hit 1 million downloads in less than 5 days](https://x.com/billpeeb/status/1976099194407616641), even faster than ChatGPT did. What happens at 10 million? 100 million? **Infrastructure for serving video models at scale is in its infancy, and approaches will continue to evolve as we bridge the gap between current and future demand.**
 
@@ -58,7 +58,7 @@ However, at the time of writing, there is a limited amount of publicly available
 In early 2022, Tim Salimans and Jonathan Ho proposed the idea of progressive distillation [8]. The algorithm starts with a teacher model with a large number of sampling steps (the paper's experiments use 1024/8192). Iteratively, the model is distilled into a "faster" student model with half the number of required sampling steps, eventually reaching as few as 4 steps. Each time, the student model learns to predict the output of two steps of the teacher model.
 
 ![Progressive distillation example](../assets/images/progressive_distillation.png)
-*Figure 1. Progressive distillation example, 4-step sampler -> 1-step sampler. source: [8]*
+*Figure 1. Progressive distillation example, 4-step sampler -> 1-step sampler.* source: [8]
 
 The idea is fairly intuitive, however, readers are still encouraged to check out the paper to understand the proposed alternative parameterizations ($x$, $\epsilon$, and $v$ prediction) and underlying math.
 
@@ -83,11 +83,23 @@ Modern video models are latent diffusion models (LDMs) [11]. LDMs allow the diff
 Without diving too deep into the technical contributions of the paper, we can understand the value of higher-compression VAEs as follows. In transformer-based video models, the sequence length directly depends on the number of frames and spatial resolution of the VAE latent output, such that $S \propto T \times H \times W$, where $H$ and $W$ are the height and width of the compressed latent map.
 
 ![Sora 1D sequence](../assets/images/video_ldm_patches.png)
-*Figure 4. Videos are VAE-encoded into a latent space, then patchified into a 1D sequence. source: [OpenAI Sora](https://openai.com/index/video-generation-models-as-world-simulators/)*
+*Figure 4. Videos are VAE-encoded into a latent space, then patchified into a 1D sequence.* source: [OpenAI Sora](https://openai.com/index/video-generation-models-as-world-simulators/)
 
 Compared to previous 8× compression methods, DC-AE's 64× compression reduces the sequence length by 64× (due to an 8× increase in both height and width compression), resulting in up to a 4096× reduction in the quadratic attention computation.
 
 ### Timestep Caching
+TeaCache (2024), proposed by Liu et al., is a training-free method that accelerates diffusion model inference [15]. Diffusion caching methods aim to reduce the number of computed sampling steps by reusing intermediate outputs.
+
+![Diffusion caching example](../assets/images/diffusion_caching.png)
+*Figure 5. Diffusion caching strategies. TeaCache selectively caches intermediate model outputs.* source: [15]
+
+Most prior training-free methods focus on reusing intermediate features, which still requires some recomputation. In contrast, the Timestep Embedding Aware Cache (TeaCache) directly reuses intermediate model outputs by leveraging the strong correlation between a model's inputs and outputs. In particular, the authors find that timestep-embedding modulated noisy inputs (from AdaLN) exhibit similarities to corresponding model outputs. 
+
+![Diffusion I/O differences across timesteps](../assets/images/dm_io.png)
+
+*Figure 6. Model outputs are strongly correlated with modulated noisy inputs, across different model families.* source: [15]
+
+To determine when to cache, the authors fit polynomials between the modulated noisy inputs and model outputs. If the accumulated L1 distance between modulated inputs at two different timesteps is below a threshold, the outputs can be reused. This approach allows us to accelerate inference by $\gt 2×$ with no perceptual differences.
 
 ### Attention Sparsity
 
