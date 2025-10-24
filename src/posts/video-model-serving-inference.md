@@ -47,7 +47,7 @@ Everyone is thinking about language model inference and serving [insert source h
 
 The clear use case is in world models - action-conditioned video generation models [1]. These models learn the complexities of the real world and can envision several futures based on different possible actions. The use of these models will allow us to scale up robotics simulation and evaluation, paving the way towards general purpose intelligence robots.
 
-![1X world model](../assets/images/world_model)
+![1X world model](../assets/images/world_model.gif)
 *Robotics world model.* source: [1]
 
 The [Sora app hit 1 million downloads in less than 5 days](https://x.com/billpeeb/status/1976099194407616641), even faster than ChatGPT did. What happens at 10 million? 100 million? **Infrastructure for serving video models at scale is in its infancy, and approaches will continue to evolve as we bridge the gap between current and future demand.**
