@@ -23,6 +23,8 @@ references:
     - 'Ho et al. ["Cascaded Diffusion Models for High Fidelity Image Generation"](https://arxiv.org/abs/2106.15282). 2021.'
     - 'Ho et al. ["Imagen Video: High Definition Video Generation with Diffusion Models"](https://arxiv.org/abs/2210.02303). 2022.'
     - 'Zhang et al. ["SageAttention: Accurate 8-Bit Attention for Plug-and-play Inference Acceleration"](https://arxiv.org/abs/2410.02367). 2025.'
+    - 'Zhao et al. ["ViDiT-Q: Efficient and Accurate Quantization of Diffusion Transformers for Image and Video Generation"](https://arxiv.org/abs/2406.02540). 2025.'
+    - 'Li et al. ["SVDQuant: Absorbing Outliers by Low-Rank Components for 4-Bit Diffusion Models"](https://arxiv.org/abs/2411.05007). 2025.'
     - 'Erwann Millon. ["Krea Realtime 14B: Real-Time, Long-Form AI Video Generation"](https://www.krea.ai/blog/krea-realtime-14b). 2025.'
     - 'Huang et al. ["Self Forcing: Bridging the Train-Test Gap in Autoregressive Video Diffusion"](https://arxiv.org/abs/2506.08009). 2025.'
     - 'Rachel Xin. ["DiT-Serve and DeepCoder: Enabling Video and Code Generation at Scale"](https://www2.eecs.berkeley.edu/Pubs/TechRpts/2025/EECS-2025-46.html). 2025.'
@@ -138,9 +140,46 @@ Each super-resolution model is conditioned on the lower-resolution input and pro
 
 The same team later applied the cascaded refinement idea to video in 2022 [19], using separate spatial and temporal super-resolution models.
 
-This cascaded refinement concept has since been incorporated into modern video diffusion models, such as the open-sourced [Seedance model from ByteDance](https://arxiv.org/abs/2506.09113).
+This cascaded refinement concept has since been incorporated into modern video diffusion models, such as the open-source [Seedance model](https://arxiv.org/abs/2506.09113).
 
-### Activation Quantization
+### Quantization
+
+Quantization allows us to compress model weights and activations from high-precision formats (e.g. FP32, BF16) into lower-precision formats (e.g. INT8, FP4). It has been historically used in two main settings:
+1. Weight-only quantization (WoQ) - only model weights are quantized.
+2. Weight + activation quantization - both weights and activations are quantized.
+
+Since WoQ does not quantize activations, it primarily targets memory-bound scenarios rather than low-precision computation. During the forward pass, low-precision weights are dequantized (upcast) to the same precision as activations (e.g. BF16, FP16), and computation proceeds in high precision. Thus, WoQ reduces memory traffic but not arithmetic cost.
+
+WoQ has been leveraged for real-world LLM inference speedups. In the memory-bound decode step, each generated token requires reading from the KV cache. In this case, throughput is limited by memory bandwidth rather than compute. Thus, quantizing weights reduces bandwidth pressure and can increase the "optimal batch size." For a deeper discussion of these dynamics, see [How To Scale Your Model](https://jax-ml.github.io/scaling-book/inference/#what-about-attention).
+
+However, video models tend to be compute-bound (since they lack a KV cache). In this regime, WoQ offers little inference benefit. Instead, we turn to weight and activation quantization, which enables low-precision computation. By quantizing both weights and activations, operations can be executed using hardware-accelerated low-precision kernels, such as [NVIDIA's 8-bit Tensor Cores](https://www.nvidia.com/en-us/data-center/tensor-cores/), achieving higher throughput. Recent works explore post-training quantization (PTQ) for video diffusion models, requiring no additional training but sometimes needing a calibration phase to maintain accuracy.
+
+One line of work focuses on methods that are model-architecture independent. SageAttention (2024) introduces a plug-and-play quantized attention module that directly replaces standard high-precision implementations [20]. SageAttention achieves a $2.1\times$ speedup over FlashAttention2, with almost no perceptible quality degradation compared to full precision.
+
+Another active direction involves mixed-precision schemes. ViDiT-Q (2024) observed that aggressively quantizing all layers leads to quality loss, with certain "sensitive" layers acting as bottlenecks [21]. The authors propose preserving these layers in higher precision while quantizing others, guided by a layer-wise sensitivity analysis.
+
+![ViDiT-Q mixed precision example](../assets/images/viditq_mp.png)
+
+*Figure 10. ViDiT-Q's mixed-precision scheme retains sensitive layers in higher precision while quantizing others.* source: [21]
+
+Although ViDiT-Q applies this mixed-precision scheme only to weights, the idea naturally generalizes to WXAX settings (e.g. mixed-precision W6A6/W8A8 schemes). A similar mixed-precision strategy appears in [Seedream](https://arxiv.org/abs/2509.20427) (image) and Seedance.
+
+SVDQuant (2024) proposes a low-rank decomposition-based approach to quantization [22]. The method first reduces quantization difficulty by migrating outliers from activations to weights using techniques like [SmoothQuant](https://arxiv.org/abs/2211.10438). Then, it decomposes each weight matrix into a low-rank component and a residual component and computation proceeds as
+
+$$XW \approx \hat{X}L_1L_2 \textbf{ (16-bit low-rank)} + Q(\hat{X})Q(R) \textbf{ (4-bit residual)}$$
+
+where the low-rank term (which is harder to quantize) is stored in higher precision (16-bit) and the resiudal term is quantized to lower precision (4-bit).
+
+![SVDQuant example](../assets/images/svdquant.png)
+
+*Figure 11. SVDQuant decomposes weights into a high-precision low-rank component and a low-precision residual, reducing quantization error.* source: [22]
+
+To enable efficient inference, the authors introduce the [Nunchaku](https://github.com/nunchaku-tech/nunchaku) engine, which fuses the low-rank Down/Up projections into the 4-bit kernel path. Without this kernel fusion, the additional DRAM transfers and kernel invocations from the low-rank branch incur a $40\\%$ latency penalty.
+
+![SVDQuant's Nunchaku](../assets/images/svdquant_nunchaku.png)
+*Figure 12. Nunchaku inference engine fuses low-rank projections with the quantized branch, reducing memory traffic and latency overhead.* source: [22]
+
+Although SVDQuant has primarily been demonstrated on image generation models, it offers a promising direction for future video quantization research.
 
 ### Autoregressive Hybrids
 
