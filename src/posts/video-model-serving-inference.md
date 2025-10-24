@@ -3,7 +3,7 @@ title: DiT/RFT Inference at Scale
 date: 2025-10-13
 description: Scaling up video model inference along the research-engineering stack.
 references:
-    - 'Monas & Jang. ["https://www.1x.tech/discover/1x-world-model"](https://www.1x.tech/discover/1x-world-model). 2024.'
+    - 'Monas & Jang. ["1X World Model"](https://www.1x.tech/discover/1x-world-model). 2024.'
     - 'Noam Shazeer. ["Fast Transformer Decoding: One Write-Head is All You Need"](https://arxiv.org/abs/1911.02150). 2019.'
     - 'Sun et al. ["You Only Cache Once: Decoder-Decoder Architectures for Language Models"](https://arxiv.org/abs/2405.05254). 2024.'
     - 'Pope et al. ["Efficiently Scaling Transformer Inference"](https://arxiv.org/pdf/2211.05102). 2022.'
@@ -23,10 +23,14 @@ references:
     - 'Ho et al. ["Cascaded Diffusion Models for High Fidelity Image Generation"](https://arxiv.org/abs/2106.15282). 2021.'
     - 'Ho et al. ["Imagen Video: High Definition Video Generation with Diffusion Models"](https://arxiv.org/abs/2210.02303). 2022.'
     - 'Zhang et al. ["SageAttention: Accurate 8-Bit Attention for Plug-and-play Inference Acceleration"](https://arxiv.org/abs/2410.02367). 2025.'
+    - 'Erwann Millon. ["Krea Realtime 14B: Real-Time, Long-Form AI Video Generation"](https://www.krea.ai/blog/krea-realtime-14b). 2025.'
+    - 'Huang et al. ["Self Forcing: Bridging the Train-Test Gap in Autoregressive Video Diffusion"](https://arxiv.org/abs/2506.08009). 2025.'
     - 'Rachel Xin. ["DiT-Serve and DeepCoder: Enabling Video and Code Generation at Scale"](https://www2.eecs.berkeley.edu/Pubs/TechRpts/2025/EECS-2025-46.html). 2025.'
     - 'Zhong et al. ["DistServe: Disaggregating Prefill and Decoding for Goodput-optimized Large Language Model Serving"](https://arxiv.org/abs/2401.09670). 2024.'
     - 'Ma et al. ["dInfer: An Efficient Inference Framework for Diffusion Language Models"](https://arxiv.org/abs/2510.08666). 2025.'
     - 'HuggingFace Team. ["Stable Video Diffusion"](https://huggingface.co/docs/diffusers/en/using-diffusers/svd).'
+    - 'Hazy Research. ["Look Ma, No Bubbles! Designing a Low-Latency Megakernel for Llama-1B"](https://hazyresearch.stanford.edu/blog/2025-05-27-no-bubbles). 2025'
+    - 'Muhammad Ali Afridi. ["How we made Wan2.2 I2V 2.5x faster"](https://www.morphic.com/blog/boosting-wan2-2-i2v-56-faster/). 2025.'
 ---
 
 
@@ -55,7 +59,7 @@ However, at the time of writing, there is a limited amount of publicly available
 
 ## Model Optimizations
 ### Step Distillation
-In early 2022, Tim Salimans and Jonathan Ho proposed the idea of progressive distillation [8]. The algorithm starts with a teacher model with a large number of sampling steps (the paper's experiments use 1024/8192). Iteratively, the model is distilled into a "faster" student model with half the number of required sampling steps, eventually reaching as few as 4 steps. Each time, the student model learns to predict the output of two steps of the teacher model.
+In early 2022, Tim Salimans and Jonathan Ho proposed the idea of progressive distillation [8]. The algorithm starts with a teacher model with a large number of sampling steps (the paper's experiments use $1024/8192$). Iteratively, the model is distilled into a "faster" student model with half the number of required sampling steps, eventually reaching as few as $4$ steps. Each time, the student model learns to predict the output of two steps of the teacher model.
 
 ![Progressive distillation example](../assets/images/progressive_distillation.png)
 *Figure 1. Progressive distillation example, 4-step sampler -> 1-step sampler.* source: [8]
@@ -68,24 +72,24 @@ Classifier-free guidance (CFG) is a technique proposed to increase sample qualit
 ![CFG example](../assets/images/cfg_different_weights.png)
 *Figure 2. CFG with different weights on SDXL.*
 
-During training, conditioning (e.g. text prompt) is randomly dropped with some probability (typically 10% of the time). This allows the model to learn both conditional (prompt-conditioned) and unconditional ("null prompt") behavior in the same network. At inference, we evaluate the model twice per diffusion step: once with the prompt and once with the null prompt. This provides both the conditional and unconditional predictions, which are then combined using $\hat{\epsilon} = \epsilon_{\text{uncond}} + w \cdot (\epsilon_{\text{cond}} - \epsilon_{\text{uncond}})$ (reparameterization of Eq. 6 from the paper) where $\epsilon_{\text{cond}}$ and $\epsilon_{\text{uncond}}$ are the noise predictions for the conditional and unconditional inputs, respectively.
+During training, conditioning (e.g. text prompt) is randomly dropped with some probability (typically $10\\%$ of the time). This allows the model to learn both conditional (prompt-conditioned) and unconditional ("null prompt") behavior in the same network. At inference, we evaluate the model twice per diffusion step: once with the prompt and once with the null prompt. This provides both the conditional and unconditional predictions, which are then combined using $\hat{\epsilon} = \epsilon_{\text{uncond}} + w \cdot (\epsilon_{\text{cond}} - \epsilon_{\text{uncond}})$ (reparameterization of Eq. 6 from the paper) where $\epsilon_{\text{cond}}$ and $\epsilon_{\text{uncond}}$ are the noise predictions for the conditional and unconditional inputs, respectively.
 
 ![CFG math example](../assets/images/cfg_math.png)
 *Figure 3. CFG-guided logits. The guided logits are pushed away from the unconditional.*
 
 Running the model twice per step is computationally expensive, so practical implementations often run it once per step with double the effective batch size to compute both conditional and unconditional outputs in parallel. However, this still increases memory usage (larger activations) and latency (typically already compute-bound). Ideally, we would like a model that directly predicts the guided output.
 
-Meng et al. (2022) proposed and validated this idea, demonstrating its compability with progressive distillation [10]. The key tradeoff is that the distilled model is tied to a specific guidance weight $w$ used during training, losing flexibility at inference time. In practice, this is acceptable since we typically use a single fixed guidance weight (usually in the range of 5-8).
+Meng et al. (2022) proposed and validated this idea, demonstrating its compability with progressive distillation [10]. The key tradeoff is that the distilled model is tied to a specific guidance weight $w$ used during training, losing flexibility at inference time. In practice, this is acceptable since we typically use a single fixed guidance weight (usually in the range of $5\text{-}8$).
 
 ### High-Compression VAE
-Modern video models are latent diffusion models (LDMs) [11]. LDMs allow the diffusion network - including architectures such as DiT [12] and RFT [13] - to operate on compressed latents, which significantly reduces training and inference compute requirements. DC-AE (2024) explores high spatial compression ratios of up to 64× (compared to conventional 8× compression), further reducing the computational workload for the diffusion network [14].
+Modern video models are latent diffusion models (LDMs) [11]. LDMs allow the diffusion network - including architectures such as DiT [12] and RFT [13] - to operate on compressed latents, which significantly reduces training and inference compute requirements. DC-AE (2024) explores high spatial compression ratios of up to $64\times$ (compared to conventional $8\times$ compression), further reducing the computational workload for the diffusion network [14].
 
 Without diving too deep into the technical contributions of the paper, we can understand the value of higher-compression VAEs as follows. In transformer-based video models, the sequence length directly depends on the number of frames and spatial resolution of the VAE latent output, such that $S \propto T \times H \times W$, where $H$ and $W$ are the height and width of the compressed latent map.
 
 ![Sora 1D sequence](../assets/images/video_ldm_patches.png)
 *Figure 4. Videos are VAE-encoded into a latent space, then patchified into a 1D sequence.* source: [OpenAI Sora](https://openai.com/index/video-generation-models-as-world-simulators/)
 
-Compared to previous 8× compression methods, DC-AE's 64× compression reduces the sequence length by 64× (due to an 8× increase in both height and width compression), resulting in up to a 4096× reduction in the quadratic attention computation.
+Compared to previous $8\times$ compression methods, DC-AE's $64\times$ compression reduces the sequence length by $64\times$ (due to an $8\times$ increase in both height and width compression), resulting in up to a $4096\times$ reduction in the quadratic attention computation.
 
 ### Timestep Caching
 TeaCache (2024), proposed by Liu et al., is a training-free method that accelerates diffusion model inference [15]. Diffusion caching methods aim to reduce the number of computed sampling steps by reusing intermediate outputs.
@@ -102,11 +106,32 @@ Most prior training-free methods focus on reusing intermediate features, which s
 To determine when to cache, the authors fit polynomials between the modulated noisy inputs and model outputs. If the accumulated L1 distance between modulated inputs at two different timesteps is below a threshold, the outputs can be reused. This approach allows us to accelerate inference by $\gt 2×$ with no perceptual differences.
 
 ### Attention Sparsity
+Sparsity has long been applied in deep learning to improve computational efficiency and reduce memory usage. [StreamingLLM (2025)](https://arxiv.org/abs/2309.17453) is a recent training-free framework for LLMs which utilizes a variant of Sliding Window Attention (SWA) to enable generalization to infinite sequence lengths. The authors find that alongside a dynamic sliding window, retaining the KV of initial tokens is crucial during inference due to the emergence of the attention sink. They further expand on this intuition in [their accompanying blog post](https://hanlab.mit.edu/blog/streamingllm), for curious readers.
+
+Two recent works extend similar sparsity ideas to video generation models, also without requiring any additional training.
+
+Sparse VideoGen (SVG, 2025) [16] proposes a method to sparsify attention computation by identifying spatial and temporal attention heads. The key intuition is that attention heads tend to specialize, attending to spatial dependencies (tokens within the same frame) or temporal dependencies (tokens at the same position across frames).
+
+![SVG attention sparsity](../assets/images/svg_maps.png)
+
+*Figure 7. Attention heads can be classified as spatial or temporal and sparsified using a corresponding mask.* source: [16]
+
+The authors find that attention dominates computation in video diffusion transformer models. Their idea leverages spatial (block-wise) or temporal (slash-wise) attention masks to sparsify attention computation. These masks also include the text prompts and first frame, as they hold signficant attention scores for both types of heads. Heads are assigned masks using an online profiling strategy:the system samples a subset of input rows and compares the results under spatial and temporal sparsity patterns against full attention. The pattern with the lower MSE relative to full attention is selected.
+
+These masks are coupled with a layout transformation that transposes token-major tensors into frame-major tensors. This makes tokens across different frames contiguous in memory, necessary for real-world efficiency. Empirically, SVG achieves up to a $2.33\times$ end-to-end speedup with minimal quality degradation.
+
+AdaSpa (2025) [17] proposes a similar sparse attention method for video models that is training-free like SVG but does not require profiling. Instead, in less than 5% of full attention generation time, an online search is conducted to find an optimal sparse mask. The authors report speedups of up to $1.78\times$, outperforming SVG on their benchmarks.
+
+![AdaSpa attention sparsity](../assets/images/adaspa.png)
+
+*Figure 8. AdaSpa performs an online search to find optimal sparse indices.* source: [17]
 
 ### Refiner
 
 
 ### Activation Quantization
+
+### Autoregressive Hybrids
 
 
 ## Serving Optimizations
@@ -121,3 +146,5 @@ This section is more experimental than previous sections. The discussion will be
 ### VAE Chunking and Caching
 
 ### Model Compilation and CUDA Graphs
+
+### Megakernels
