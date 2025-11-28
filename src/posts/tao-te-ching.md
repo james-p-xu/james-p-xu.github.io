@@ -1,6 +1,7 @@
 ---
-title: Wisdom from the Tao Te Ching
+title: Tao Te Ching
 date: 2025-09-28
+description: Wisdom from one of China's foundational philosophical works.
 references:
     - 'Lao Tzu. ["Tao Te Ching"](https://www.penguinrandomhouse.com/books/349945/tao-te-ching-by-lao-tzu/).'
 ---
